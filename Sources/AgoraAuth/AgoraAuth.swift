@@ -13,9 +13,9 @@ import UIKit.UIViewController
 import WebKit
 
 
-typealias AgoraAuthHandler = UIViewController & AgoraAuthDelegate
+public typealias AgoraAuthHandler = UIViewController & AgoraAuthDelegate
 
-protocol AgoraAuthDelegate: AnyObject {
+public protocol AgoraAuthDelegate: AnyObject {
     func agoraAuth(success code: String, state: [String: Any])
     func agoraAuth(error: String)
     /// Asks the delegate to return a client config
@@ -27,7 +27,7 @@ protocol AgoraAuthDelegate: AnyObject {
 
 extension AgoraAuth: WKUIDelegate, WKNavigationDelegate {
     
-    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+    public func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         guard let clientConfig = self.clientConfig else {
             self.delegate?.agoraAuth(error: "AgoraAuth: Invalid client config")
             return
@@ -54,9 +54,9 @@ extension AgoraAuth: WKUIDelegate, WKNavigationDelegate {
     }
 }
 
-class AgoraAuth: NSObject {
+public class AgoraAuth: NSObject {
     
-    struct ClientConfig {
+    public struct ClientConfig {
         let clientId: String
         let redirectUri: String
         let issuer: String
@@ -69,14 +69,14 @@ class AgoraAuth: NSObject {
         var clientSecret: String?
     }
     
-    struct OauthConfig {
+    public struct OauthConfig {
         let issuer: String
         let authUrl: String
         let tokenUrl: String
         let userInfoUrl: String
     }
     
-    static let shared = AgoraAuth()
+    public static let shared = AgoraAuth()
     private override init() {}
     
     private weak var presenter: UIViewController?
@@ -95,13 +95,13 @@ class AgoraAuth: NSObject {
     
     /// Begin the sign in flow. AgoraAuth will ask the delegate for the required information before opening a
     /// web view for the user to sign in.
-    func signIn(handler: AgoraAuthHandler) {
+    public func signIn(handler: AgoraAuthHandler) {
         self.signIn(presenter: handler, delegate: handler)
     }
     
     /// Begin the sign in flow. AgoraAuth will ask the delegate for the required information before opening a
     /// web view for the user to sign in.
-    func signIn(presenter: UIViewController, delegate: AgoraAuthDelegate) {
+    public func signIn(presenter: UIViewController, delegate: AgoraAuthDelegate) {
         self.presenter = presenter
         self.delegate = delegate
         
@@ -226,7 +226,6 @@ class AgoraAuth: NSObject {
     }
     
     private func present(authUrl: URL) {
-        let config = WKWebViewConfiguration()
         webView = WKWebView(frame: .zero)
         webView.uiDelegate = self
         webView.navigationDelegate = self
@@ -288,7 +287,7 @@ class AgoraAuth: NSObject {
     
     /// Requires a valid client config, including the client secret.
     /// Requires a valid oauth config, and that it contains a user info URL.
-    func exchangeAuthCode(code: String, result: @escaping (String?) -> Void) {
+    public func exchangeAuthCode(code: String, result: @escaping (String?) -> Void) {
         guard let clientConfig = self.clientConfig else {
             self.delegate?.agoraAuth(error: "AgoraAuth: Invalid client config")
             result(nil)
@@ -372,7 +371,7 @@ class AgoraAuth: NSObject {
     }
     
     /// Requires a valid oauth config, and that it contains a user info URL
-    func fetchUserInfo(accessToken: String, result: @escaping ([String: Any?]?) -> Void) {
+    public func fetchUserInfo(accessToken: String, result: @escaping ([String: Any?]?) -> Void) {
         guard let oauthConfig = self.oauthConfig else {
             self.delegate?.agoraAuth(error: "AgoraAuth: Missing oauth config")
             result(nil)
