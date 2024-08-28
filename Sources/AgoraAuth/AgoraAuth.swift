@@ -67,6 +67,14 @@ public class AgoraAuth: NSObject {
         /// The client secret that can be used to make requests to the IDP. Not all implementations
         /// require this secure key, consider whether you need to expose this secret client side.
         var clientSecret: String?
+        
+        public init(clientId: String, redirectUri: String, issuer: String, scope: String = "openid offline_access device_sso email profile", clientSecret: String? = nil) {
+            self.clientId = clientId
+            self.redirectUri = redirectUri
+            self.issuer = issuer
+            self.scope = scope
+            self.clientSecret = clientSecret
+        }
     }
     
     public struct OauthConfig {
@@ -74,6 +82,13 @@ public class AgoraAuth: NSObject {
         let authUrl: String
         let tokenUrl: String
         let userInfoUrl: String
+        
+        public init(issuer: String, authUrl: String, tokenUrl: String, userInfoUrl: String) {
+            self.issuer = issuer
+            self.authUrl = authUrl
+            self.tokenUrl = tokenUrl
+            self.userInfoUrl = userInfoUrl
+        }
     }
     
     public static let shared = AgoraAuth()
@@ -145,13 +160,8 @@ public class AgoraAuth: NSObject {
         var request = URLRequest(url: issuer_config_url.url!)
         request.httpMethod = "GET"
         
-        let task = URLSession.shared.dataTask(with: request) { [weak self, weak delegate] data, response, error in
+        let task = URLSession.shared.dataTask(with: request) { [weak delegate] data, response, error in
             DispatchQueue.main.async {
-                guard let self else {
-                    result(nil)
-                    return
-                }
-                
                 if let error {
                     delegate?.agoraAuth(error: "AgoraAuth: \(error.localizedDescription)")
                     result(nil)
@@ -247,7 +257,7 @@ public class AgoraAuth: NSObject {
         }
     }
     
-    func handleRedirect(url: URL) -> Bool {
+    public func handleRedirect(url: URL) -> Bool {
         guard
             let redirectUrl = URLComponents(string: clientConfig?.redirectUri ?? ""),
             let components = NSURLComponents(url: url, resolvingAgainstBaseURL: true),
