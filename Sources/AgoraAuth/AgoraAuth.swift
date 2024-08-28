@@ -163,8 +163,9 @@ public class AgoraAuth: NSObject {
         task.resume()
     }
     
-    private func requestAuthCode(clientConfig: ClientConfig, oauthConfig: OauthConfig, authState: Encodable) {
-        let jsonData = try! JSONEncoder().encode(authState)
+    private func requestAuthCode(clientConfig: ClientConfig, oauthConfig: OauthConfig, authState: AgoraAuthState) {
+        let stateDict = authState.dictionary as! Encodable
+        let jsonData = try! JSONEncoder().encode(stateDict)
         let state64 = jsonData.base64EncodedString()
         
         guard var authUrl = URLComponents(string: oauthConfig.authUrl) else {
