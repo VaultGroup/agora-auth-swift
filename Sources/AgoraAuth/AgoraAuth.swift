@@ -1,58 +1,14 @@
-// The Swift Programming Language
-// https://docs.swift.org/swift-book
 //
 //  AgoraAuth.swift
-//  VaultRE
 //
 //  Created by Will Connelly on 23/8/2024.
-//  Copyright © 2024 Complete RE Solutions. All rights reserved.
+//  Copyright © 2024 MRI Software LLC. All rights reserved.
 //
 
 import Foundation
 import UIKit.UIViewController
 import WebKit
 
-
-public typealias AgoraAuthHandler = UIViewController & AgoraAuthDelegate
-
-public protocol AgoraAuthDelegate: AnyObject {
-    func agoraAuth(success code: String, state: [String: Any])
-    func agoraAuth(error: String)
-    /// Asks the delegate to return a client config
-    func agoraAuth(clientConfig result: @escaping (AgoraAuth.ClientConfig?) -> Void)
-    /// You can return any values in the handler and it will be included in the `state` argument of the oauth request. For Agora Authentication,
-    /// you must include `source_redirect_url` and `authorize_url`
-    func agoraAuth(authState clientConfig: AgoraAuth.ClientConfig, oauthConfig: AgoraAuth.OauthConfig, result: @escaping (Encodable) -> Void)
-}
-
-extension AgoraAuth: WKUIDelegate, WKNavigationDelegate {
-    
-    public func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-        guard let clientConfig = self.clientConfig else {
-            self.delegate?.agoraAuth(error: "AgoraAuth: Invalid client config")
-            return
-        }
-        
-        guard let redirectUrl = URLComponents(string: clientConfig.redirectUri) else {
-            self.delegate?.agoraAuth(error: "AgoraAuth: Unable to determine scheme from redirect URI")
-            return
-        }
-        
-        if let url = navigationAction.request.url, url.scheme == redirectUrl.scheme {
-            // Cancel the webview navigation, we'll handle it here
-            decisionHandler(.cancel)
-            // Call the default app delegate redirect handler
-            self.webViewNavigationController?.dismiss(animated: true) {
-                if let appDelegate = UIApplication.shared.delegate {
-                    _ = appDelegate.application?(UIApplication.shared, open: url, options: [:])
-                }
-            }
-            return
-        }
-        // Follow legit redirects
-        decisionHandler(.allow)
-    }
-}
 
 public class AgoraAuth: NSObject {
     
@@ -95,12 +51,12 @@ public class AgoraAuth: NSObject {
     private override init() {}
     
     private weak var presenter: UIViewController?
-    private weak var delegate: AgoraAuthDelegate?
+    internal weak var delegate: AgoraAuthDelegate?
     
-    private var clientConfig: ClientConfig?
-    private var oauthConfig: OauthConfig?
+    internal var clientConfig: ClientConfig?
+    internal var oauthConfig: OauthConfig?
     
-    private var webViewNavigationController: UINavigationController?
+    internal var webViewNavigationController: UINavigationController?
     private var webViewController: UIViewController?
     private var webView: WKWebView!
     
