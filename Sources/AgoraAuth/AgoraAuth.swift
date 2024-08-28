@@ -57,16 +57,16 @@ extension AgoraAuth: WKUIDelegate, WKNavigationDelegate {
 public class AgoraAuth: NSObject {
     
     public struct ClientConfig {
-        let clientId: String
-        let redirectUri: String
-        let issuer: String
+        public let clientId: String
+        public let redirectUri: String
+        public let issuer: String
         
         /// A space delimited list of scopes being requested
-        var scope: String = "openid offline_access device_sso email profile"
+        public var scope: String = "openid offline_access device_sso email profile"
         
         /// The client secret that can be used to make requests to the IDP. Not all implementations
         /// require this secure key, consider whether you need to expose this secret client side.
-        var clientSecret: String?
+        public var clientSecret: String?
         
         public init(clientId: String, redirectUri: String, issuer: String, scope: String = "openid offline_access device_sso email profile", clientSecret: String? = nil) {
             self.clientId = clientId
@@ -78,10 +78,10 @@ public class AgoraAuth: NSObject {
     }
     
     public struct OauthConfig {
-        let issuer: String
-        let authUrl: String
-        let tokenUrl: String
-        let userInfoUrl: String
+        public let issuer: String
+        public let authUrl: String
+        public let tokenUrl: String
+        public let userInfoUrl: String
         
         public init(issuer: String, authUrl: String, tokenUrl: String, userInfoUrl: String) {
             self.issuer = issuer
