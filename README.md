@@ -29,7 +29,7 @@ extension UIViewController: AgoraAuthDelegate {
         let config = AgoraAuth.ClientConfig(
             clientId: provider.clientIdentifier,
             redirectUri: provider.redirectUri,
-            issuer: provider.authorityUrl)
+            issuer: provider.issuer)
         
         result(config)
     }
