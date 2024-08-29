@@ -1,13 +1,14 @@
 # AgoraAuth for Swift
 
-This Swift Package simplifies the process of Agora authentication with preconstructed
-calls to the identity provider with the required queries and claims.
+A pure Swift Package to simplify the process of Agora authentication, with preconstructed
+calls to the identity provider with the required queries and claims. This package is
+dependency free.
 
 ## Implementation
 
 1. In your Xcode project: File > Add Package Dependencies... > https://github.com/VaultGroup/agora-auth-swift
 1. Implement `AgoraAuthDelegate`
-1. Call AgoraAuth.shared.signIn(handler: self)
+1. Call `AgoraAuth.shared.signIn(handler: self)`
 
 ## Example
 
@@ -48,7 +49,7 @@ extension UIViewController: AgoraAuthDelegate {
 }
 ```
 
-AgoraAuth can handle the redirect after successfully authenticating. Implement the handler in the `AppDelegate`
+`AgoraAuth` can handle the redirect after successfully authenticating. Implement the handler in the `AppDelegate`
 method 
 
 ```swift AppDelegate.swift
@@ -59,3 +60,19 @@ func application(_ app: UIApplication, open url: URL, options: [UIApplication.Op
     }
 }
 ```
+
+Begin the sign in flow by calling one of the public `signIn(:)` methods. You can implement the delegate in your view,
+or delegate `AgoraAuth` events to another object.
+
+```swift
+// 1. Delegate is implemented in a UIViewController
+AgoraAuth.shared.signIn(handler: self)
+
+// 2. Provide a presenter and a delegate
+AgoraAuth.shared.signIn(presenter: self, delegate: someDelegate)
+```
+
+## Contributions
+
+Contributions are welcome. This project could easily be adapted to work as a generic Oauth client, however certain values
+are hardcoded to simplify the API.
