@@ -42,7 +42,10 @@ extension UIViewController: AgoraAuthDelegate {
         // returned as a dictionary in `agoraAuth(success:state:)` if the request is successful
         let state = AgoraAuthState(
             source_redirect_url: clientConfig.redirectUri,
-            authorize_url: oauthConfig.authUrl)
+            authorize_url: oauthConfig.authUrl,
+            state: [
+                "foo": "bar"
+            ])
         result(state)
     }
 }

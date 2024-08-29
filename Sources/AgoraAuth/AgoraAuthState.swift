@@ -13,7 +13,7 @@ public struct AgoraAuthState {
     private let authorize_url: String
     private var other: [String:Encodable]
     
-    public init(source_redirect_url: String, authorize_url: String, _ state: [String:Encodable] = [:]) {
+    public init(source_redirect_url: String, authorize_url: String, state: [String:Encodable] = [:]) {
         self.source_redirect_url = source_redirect_url
         self.authorize_url = authorize_url
         self.other = state
