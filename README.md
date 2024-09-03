@@ -24,9 +24,9 @@ extension UIViewController: AgoraAuthDelegate {
         // Handle any errors here
     }
     
-    public func agoraAuth(clientConfig result: @escaping (AgoraAuth.ClientConfig?) -> Void) {
+    public func agoraAuth(clientConfig result: @escaping (AgoraClientConfig?) -> Void) {
         // Return a client config in the result handler
-        let config = AgoraAuth.ClientConfig(
+        let config = AgoraClientConfig(
             clientId: provider.clientIdentifier,
             redirectUri: provider.redirectUri,
             issuer: provider.issuer)
@@ -34,8 +34,8 @@ extension UIViewController: AgoraAuthDelegate {
     }
     
     public func agoraAuth(
-        authState clientConfig: AgoraAuth.ClientConfig, 
-        oauthConfig: AgoraAuth.OauthConfig, 
+        authState clientConfig: AgoraClientConfig, 
+        oauthConfig: AgoraOauthConfig, 
         result: @escaping (AgoraAuthState) -> Void
     ) {
         // Return the state argument passed to the auth url. This object will be encoded as a JSON respresentation and
