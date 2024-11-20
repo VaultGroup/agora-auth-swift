@@ -130,7 +130,7 @@ public class AgoraAuth: NSObject {
     
     private func requestAuthCode(clientConfig: AgoraClientConfig, oauthConfig: AgoraOauthConfig, authState: AgoraAuthState) {
         let jsonData = try! JSONSerialization.data(withJSONObject: authState.dictionary)
-        let state64 = jsonData.base64EncodedString()
+        let stateData = String(data: jsonData, encoding: .utf8)
         
         guard var authUrl = URLComponents(string: oauthConfig.authUrl) else {
             self.delegate?.agoraAuth(error: .invalidClientConfig("Invalid auth URL"))
@@ -143,11 +143,12 @@ public class AgoraAuth: NSObject {
             URLQueryItem(name: "scope", value: clientConfig.scope),
             URLQueryItem(name: "response_type", value: "code"),
             URLQueryItem(name: "response_mode", value: "query"),
-            URLQueryItem(name: "state", value: state64),
+            URLQueryItem(name: "state", value: stateData),
             URLQueryItem(name: "$interstitial_email_federation", value: "true"),
             URLQueryItem(name: "client_id", value: clientConfig.clientId),
             URLQueryItem(name: "code_challenge", value: clientConfig.codeChallenge),
             URLQueryItem(name: "code_challenge_method", value: "S256"),
+            URLQueryItem(name: "login_hint", value: clientConfig.loginHint ?? ""),
         ]
         
         guard let url = authUrl.url else {
@@ -208,7 +209,7 @@ public class AgoraAuth: NSObject {
         
         guard
             let state64 = self.queryItem(from: components, name: "state"),
-            let stateData = Data(base64Encoded: state64),
+            let stateData = state64.data(using: .utf8),
             let state = try? JSONSerialization.jsonObject(with: stateData, options: []) as? [String: Any]
         else {
             self.delegate?.agoraAuth(error: .authError("Unable to determine state from redirect URL"))

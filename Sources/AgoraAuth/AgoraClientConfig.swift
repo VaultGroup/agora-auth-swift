@@ -20,16 +20,26 @@ public struct AgoraClientConfig {
     /// require this secure key, consider whether you need to expose this secret client side.
     public var clientSecret: String?
     
+    public var loginHint: String?
+    
     public let codeVerifier: String
     public let codeChallenge: String
     
     /// PKCE code verifier and challenge will be generated on init
-    public init(clientId: String, redirectUri: String, issuer: String, scope: String = "openid offline_access device_sso email profile", clientSecret: String? = nil) {
+    public init(
+        clientId: String,
+        redirectUri: String,
+        issuer: String,
+        scope: String = "openid offline_access device_sso email profile",
+        clientSecret: String? = nil,
+        loginHint: String
+    ) {
         self.clientId = clientId
         self.redirectUri = redirectUri
         self.issuer = issuer
         self.scope = scope
         self.clientSecret = clientSecret
+        self.loginHint = loginHint
         
         self.codeVerifier = AgoraPkce.generateCodeVerifier()
         self.codeChallenge = AgoraPkce.generateCodeChallenge(from: codeVerifier)
