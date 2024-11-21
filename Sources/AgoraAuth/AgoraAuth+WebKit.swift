@@ -13,15 +13,18 @@ extension AgoraAuth: WKUIDelegate, WKNavigationDelegate {
     
     public func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         guard let clientConfig = self.clientConfig else {
-            self.delegate?.agoraAuth(error: .invalidClientConfig("Invalid client config"))
+            self.delegate?.agoraAuth(error: .invalidClientConfig(message: "Invalid client config"))
+            decisionHandler(.allow)
             return
         }
         
         guard let redirectUrl = URLComponents(string: clientConfig.redirectUri) else {
-            self.delegate?.agoraAuth(error: .invalidClientConfig("Unable to determine scheme from redirect URI"))
+            self.delegate?.agoraAuth(error: .invalidClientConfig(message: "Unable to determine scheme from redirect URI"))
+            decisionHandler(.allow)
             return
         }
         
+        // If the redirect URL scheme matches the client config, call the app delegate and dismiss the web view
         if let url = navigationAction.request.url, url.scheme == redirectUrl.scheme {
             // Cancel the webview navigation, we'll handle it here
             decisionHandler(.cancel)
@@ -33,6 +36,7 @@ extension AgoraAuth: WKUIDelegate, WKNavigationDelegate {
             }
             return
         }
+        
         // Follow legit redirects
         decisionHandler(.allow)
     }

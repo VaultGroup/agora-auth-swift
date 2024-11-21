@@ -9,9 +9,9 @@ import Foundation
 
 
 public enum AgoraAuthError: Error {
-    case invalidClientConfig(_ message: String)
-    case serverError(_ message: String)
-    case parseError(_ message: String)
-    case authError(_ message: String)
+    case invalidClientConfig(message: String)
+    case serverError(message: String)
+    case parseError(message: String)
+    case authError(message: String)
 }
 

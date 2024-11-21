@@ -12,9 +12,10 @@ public struct AgoraClientConfig {
     public let clientId: String
     public let redirectUri: String
     public let issuer: String
+    public let authorityId: String?
     
     /// A space delimited list of scopes being requested
-    public var scope: String = "openid offline_access device_sso email profile"
+    public var scope: String = "openid offline_access email profile"
     
     /// The client secret that can be used to make requests to the IDP. Not all implementations
     /// require this secure key, consider whether you need to expose this secret client side.
@@ -30,13 +31,15 @@ public struct AgoraClientConfig {
         clientId: String,
         redirectUri: String,
         issuer: String,
-        scope: String = "openid offline_access device_sso email profile",
+        authorityId: String? = nil,
+        scope: String = "openid offline_access email profile",
         clientSecret: String? = nil,
         loginHint: String
     ) {
         self.clientId = clientId
         self.redirectUri = redirectUri
         self.issuer = issuer
+        self.authorityId = authorityId
         self.scope = scope
         self.clientSecret = clientSecret
         self.loginHint = loginHint

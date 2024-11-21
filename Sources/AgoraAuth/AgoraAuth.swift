@@ -45,7 +45,7 @@ public class AgoraAuth: NSObject {
         delegate.agoraAuth { [weak self] clientConfig in
             guard let self else { return }
             guard let config = clientConfig else {
-                self.delegate?.agoraAuth(error: .invalidClientConfig("Missing client config"))
+                self.delegate?.agoraAuth(error: .invalidClientConfig(message: "Missing client config"))
                 return
             }
             // Store the client config
@@ -55,7 +55,7 @@ public class AgoraAuth: NSObject {
             self.fetchOpenidConfiguration(config: config) { [weak self] oauthConfig in
                 guard let self else { return }
                 guard let oauthConfig else {
-                    self.delegate?.agoraAuth(error: .invalidClientConfig("Missing oauth config"))
+                    self.delegate?.agoraAuth(error: .invalidClientConfig(message: "Missing oauth config"))
                     return
                 }
                 // Store the oauth config
@@ -71,38 +71,38 @@ public class AgoraAuth: NSObject {
     }
     
     private func fetchOpenidConfiguration(config: AgoraClientConfig, result: @escaping (AgoraOauthConfig?) -> Void) {
-        let issuer_config = config.issuer + "/.well-known/openid-configuration"
-        guard let issuer_config_url = URLComponents(string: issuer_config) else {
-            self.delegate?.agoraAuth(error: .invalidClientConfig("Invalid openid config URL"))
+        let issuerConfig = config.issuer + "/" + (config.authorityId ?? "default") + "/.well-known/openid-configuration"
+        guard let issuerConfigUrl = URLComponents(string: issuerConfig) else {
+            self.delegate?.agoraAuth(error: .invalidClientConfig(message: "Invalid openid config URL"))
             result(nil)
             return
         }
         
-        var request = URLRequest(url: issuer_config_url.url!)
+        var request = URLRequest(url: issuerConfigUrl.url!)
         request.httpMethod = "GET"
         
         let task = URLSession.shared.dataTask(with: request) { [weak delegate] data, response, error in
             DispatchQueue.main.async {
                 if let error {
-                    delegate?.agoraAuth(error: .serverError(error.localizedDescription))
+                    delegate?.agoraAuth(error: .serverError(message: error.localizedDescription))
                     result(nil)
                     return
                 }
                 
                 guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
-                    delegate?.agoraAuth(error: .serverError(String(describing: response)))
+                    delegate?.agoraAuth(error: .serverError(message: String(describing: response)))
                     result(nil)
                     return
                 }
                 
                 guard let data else {
-                    delegate?.agoraAuth(error: .serverError("No data response from server"))
+                    delegate?.agoraAuth(error: .serverError(message: "No data response from server"))
                     result(nil)
                     return
                 }
                 
                 guard let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] else {
-                    delegate?.agoraAuth(error: .parseError("Error parsing oauth config response from issuer"))
+                    delegate?.agoraAuth(error: .parseError(message: "Error parsing oauth config response from issuer"))
                     result(nil)
                     return
                 }
@@ -112,7 +112,7 @@ public class AgoraAuth: NSObject {
                     let tokenUrl = json["token_endpoint"] as? String,
                     let userInfoUrl = json["userinfo_endpoint"] as? String
                 else {
-                    delegate?.agoraAuth(error: .parseError("Missing required oauth config properties from issuer openid config"))
+                    delegate?.agoraAuth(error: .parseError(message: "Missing required oauth config properties from issuer openid config"))
                     result(nil)
                     return
                 }
@@ -128,35 +128,56 @@ public class AgoraAuth: NSObject {
         task.resume()
     }
     
-    private func requestAuthCode(clientConfig: AgoraClientConfig, oauthConfig: AgoraOauthConfig, authState: AgoraAuthState) {
-        let jsonData = try! JSONSerialization.data(withJSONObject: authState.dictionary)
+    private func requestAuthCode(clientConfig: AgoraClientConfig, oauthConfig: AgoraOauthConfig, authState: [String: Any]) {
+        
+        var authState = authState
+        if !authState.keys.contains("source_redirect_url") {
+            authState["source_redirect_url"] = clientConfig.redirectUri
+        }
+        
+        let jsonData = try! JSONSerialization.data(withJSONObject: authState)
         let stateData = String(data: jsonData, encoding: .utf8)
         
         guard var authUrl = URLComponents(string: oauthConfig.authUrl) else {
-            self.delegate?.agoraAuth(error: .invalidClientConfig("Invalid auth URL"))
+            self.delegate?.agoraAuth(error: .invalidClientConfig(message: "Invalid auth URL"))
             return
         }
         
-        authUrl.queryItems = [
-            URLQueryItem(name: "redirect_uri", value: clientConfig.redirectUri),
+        var authQueryItems: [URLQueryItem] = [
             URLQueryItem(name: "nonce", value: UUID().uuidString),
             URLQueryItem(name: "scope", value: clientConfig.scope),
             URLQueryItem(name: "response_type", value: "code"),
             URLQueryItem(name: "response_mode", value: "query"),
             URLQueryItem(name: "state", value: stateData),
-            URLQueryItem(name: "$interstitial_email_federation", value: "true"),
             URLQueryItem(name: "client_id", value: clientConfig.clientId),
             URLQueryItem(name: "code_challenge", value: clientConfig.codeChallenge),
             URLQueryItem(name: "code_challenge_method", value: "S256"),
             URLQueryItem(name: "login_hint", value: clientConfig.loginHint ?? ""),
+            URLQueryItem(name: "$interstitial_email_federation", value: "true"),
+            
+            // ==
+            // Even though these are included in the query string of the oauth config authorization endpoint,
+            // we must provide them again. Why? I do not know. But the user will be prompted to enter a client
+            // ID without them.
+            URLQueryItem(name: "$interstitial_prompt_mri_client_id", value: "true"),
+            URLQueryItem(name: "$interstitial_tryGetClientIdFromCookie", value: "false"),
+            // ==
         ]
         
+        // NOTE: The authorize url is included in the query string of the oauth config authorization endpoint
+        for queryItem in URLComponents(string: oauthConfig.authUrl)?.queryItems ?? [] {
+            authQueryItems.append(queryItem)
+        }
+        
+        authUrl.queryItems = authQueryItems
+        
         guard let url = authUrl.url else {
-            self.delegate?.agoraAuth(error: .invalidClientConfig("Unable to generate auth URL"))
+            self.delegate?.agoraAuth(error: .invalidClientConfig(message: "Unable to generate auth URL"))
             return
         }
+        
         // NOTE: Auth code will be acquired on redirect!
-        self.present(authUrl: url)
+         self.present(authUrl: url)
     }
     
     private func present(authUrl: URL) {
@@ -186,7 +207,7 @@ public class AgoraAuth: NSObject {
             let clientConfig = self.clientConfig,
             let redirectUrl = URLComponents(string: clientConfig.redirectUri),
             let components = NSURLComponents(url: url, resolvingAgainstBaseURL: true),
-            redirectUrl.host == components.host
+            redirectUrl.scheme == components.scheme
         else {
             // Redirect doesnt match our client config, debounce
             return false
@@ -195,28 +216,29 @@ public class AgoraAuth: NSObject {
         // short circuit on error
         if let error = self.queryItem(from: components, name: "error") {
             if let desc = self.queryItem(from: components, name: "error_description") {
-                self.delegate?.agoraAuth(error: .authError("\(error) \(desc)"))
+                self.delegate?.agoraAuth(error: .authError(message: "\(error) \(desc)"))
             } else {
-                self.delegate?.agoraAuth(error: .authError(error))
+                self.delegate?.agoraAuth(error: .authError(message: error))
             }
             return true
         }
         
         guard let code = self.queryItem(from: components, name: "code") else {
-            self.delegate?.agoraAuth(error: .authError("auth code not found in redirect URL"))
+            self.delegate?.agoraAuth(error: .authError(message: "auth code not found in redirect URL"))
             return true
         }
         
         guard
             let state64 = self.queryItem(from: components, name: "state"),
-            let stateData = state64.data(using: .utf8),
+            let stateDecoded = state64.removingPercentEncoding,
+            let stateData = stateDecoded.data(using: .utf8),
             let state = try? JSONSerialization.jsonObject(with: stateData, options: []) as? [String: Any]
         else {
-            self.delegate?.agoraAuth(error: .authError("Unable to determine state from redirect URL"))
+            self.delegate?.agoraAuth(error: .authError(message: "Unable to determine state from redirect URL"))
             return true
         }
         
-        self.delegate?.agoraAuth(success: code, config: clientConfig, state: [:])
+        self.delegate?.agoraAuth(success: code, config: clientConfig, state: state)
         return true
     }
     
@@ -224,19 +246,19 @@ public class AgoraAuth: NSObject {
     /// Requires a valid oauth config, and that it contains a user info URL.
     public func exchangeAuthCode(code: String, result: @escaping (String?) -> Void) {
         guard let clientConfig = self.clientConfig else {
-            self.delegate?.agoraAuth(error: .invalidClientConfig("Missing client config"))
+            self.delegate?.agoraAuth(error: .invalidClientConfig(message: "Missing client config"))
             result(nil)
             return
         }
         
         guard let oauthConfig = self.oauthConfig else {
-            self.delegate?.agoraAuth(error: .invalidClientConfig("Missing oauth config"))
+            self.delegate?.agoraAuth(error: .invalidClientConfig(message: "Missing oauth config"))
             result(nil)
             return
         }
         
         guard let clientSecret = clientConfig.clientSecret else {
-            self.delegate?.agoraAuth(error: .invalidClientConfig("Unknown client secret, cannot exchange auth code"))
+            self.delegate?.agoraAuth(error: .invalidClientConfig(message: "Unknown client secret, cannot exchange auth code"))
             result(nil)
             return
         }
@@ -244,14 +266,14 @@ public class AgoraAuth: NSObject {
         var tokenUrl = URLComponents(string: oauthConfig.tokenUrl)!
         tokenUrl.queryItems = [
             URLQueryItem(name: "grant_type", value: "authorization_code"),
-            URLQueryItem(name: "code", value: code),
             URLQueryItem(name: "redirect_uri", value: clientConfig.redirectUri),
+            URLQueryItem(name: "code", value: code),
             URLQueryItem(name: "code_verifier", value: clientConfig.codeVerifier),
         ]
         
         let authString = [clientConfig.clientId, clientSecret].joined(separator: ":")
         guard let auth64 = authString.data(using: .utf8)?.base64EncodedString() else {
-            self.delegate?.agoraAuth(error: .invalidClientConfig("Error encoding authorization string"))
+            self.delegate?.agoraAuth(error: .invalidClientConfig(message: "Error encoding authorization string"))
             result(nil)
             return
         }
@@ -269,13 +291,13 @@ public class AgoraAuth: NSObject {
                 }
                 
                 if let error {
-                    self.delegate?.agoraAuth(error: .serverError(error.localizedDescription))
+                    self.delegate?.agoraAuth(error: .serverError(message: error.localizedDescription))
                     result(nil)
                     return
                 }
                 
                 guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
-                    self.delegate?.agoraAuth(error: .serverError(String(describing: response)))
+                    self.delegate?.agoraAuth(error: .serverError(message: String(describing: response)))
                     result(nil)
                     return
                 }
@@ -286,14 +308,14 @@ public class AgoraAuth: NSObject {
                 }
                 
                 guard let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] else {
-                    self.delegate?.agoraAuth(error: .parseError("JSON parse error from token endpoint"))
+                    self.delegate?.agoraAuth(error: .parseError(message: "JSON parse error from token endpoint"))
                     result(nil)
                     return
                 }
                 
                 guard let accessToken = json["access_token"] as? String else {
                     let error = json["error"] as? String
-                    self.delegate?.agoraAuth(error: .serverError(error ?? "Unknown server error, no access token returned"))
+                    self.delegate?.agoraAuth(error: .serverError(message: error ?? "Unknown server error, no access token returned"))
                     result(nil)
                     return
                 }
@@ -309,13 +331,13 @@ public class AgoraAuth: NSObject {
     /// Requires a valid oauth config, and that it contains a user info URL
     public func fetchUserInfo(accessToken: String, result: @escaping ([String: Any?]?) -> Void) {
         guard let oauthConfig = self.oauthConfig else {
-            self.delegate?.agoraAuth(error: .invalidClientConfig("Missing oauth config"))
+            self.delegate?.agoraAuth(error: .invalidClientConfig(message: "Missing oauth config"))
             result(nil)
             return
         }
         
         guard let url = URL(string: oauthConfig.userInfoUrl) else {
-            self.delegate?.agoraAuth(error: .invalidClientConfig("Missing user info URL"))
+            self.delegate?.agoraAuth(error: .invalidClientConfig(message: "Missing user info URL"))
             result(nil)
             return
         }
@@ -333,25 +355,25 @@ public class AgoraAuth: NSObject {
                 }
                 
                 if let error = error {
-                    self.delegate?.agoraAuth(error: .serverError("Request error \(error.localizedDescription)"))
+                    self.delegate?.agoraAuth(error: .serverError(message: "Request error \(error.localizedDescription)"))
                     result(nil)
                     return
                 }
                 
                 guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
-                    self.delegate?.agoraAuth(error: .serverError("Server request failed \(String(describing: response))"))
+                    self.delegate?.agoraAuth(error: .serverError(message: "Server request failed \(String(describing: response))"))
                     result(nil)
                     return
                 }
                 
                 guard let data else {
-                    self.delegate?.agoraAuth(error: .serverError("No data response from server"))
+                    self.delegate?.agoraAuth(error: .serverError(message: "No data response from server"))
                     result(nil)
                     return
                 }
                 
                 guard let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any?] else {
-                    self.delegate?.agoraAuth(error: .parseError("JSON parse error from user info response"))
+                    self.delegate?.agoraAuth(error: .parseError(message: "JSON parse error from user info response"))
                     result(nil)
                     return
                 }
